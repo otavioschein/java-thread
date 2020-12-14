@@ -1,6 +1,8 @@
 package database;
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.DB;
+import com.mongodb.MongoClient;
 import entities.Bicycle;
 import entities.Car;
 import entities.Motorcycle;
@@ -11,6 +13,12 @@ public class services {
     private static BasicDBObject carDocument = new BasicDBObject();
     private static BasicDBObject motorcycleDocument = new BasicDBObject();
     private static BasicDBObject bicycleDocument = new BasicDBObject();
+
+    public static DB getDatabase() {
+        MongoClient mongoClient = new MongoClient("localhost", 27017);
+        DB database = mongoClient.getDB("vehicles_db");
+        return database;
+    }
 
     public static BasicDBObject getCarDocument(Car carObj) throws NullPointerException {
         carDocument.put("_id", ObjectId.get());

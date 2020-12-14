@@ -6,9 +6,16 @@ import entities.Bicycle;
 import entities.Car;
 import entities.Motorcycle;
 import service.makeObj;
+import threads.BicycleTask;
+import threads.CarTask;
+import threads.MotorcycleTask;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 
 public class Main {
@@ -18,93 +25,88 @@ public class Main {
     // utilizar stream
 
     public static void main(String[] args) {
-        ArrayList<Car> carList = makeObj.getCarList();
-        ArrayList<Motorcycle> motorcycleList = makeObj.getMotorcycleList();
-        ArrayList<Bicycle> bicycleList = makeObj.getBicycleList();
+        List<Car> carList = makeObj.getCarList();
+        List<Motorcycle> motorcycleList = makeObj.getMotorcycleList();
+        List<Bicycle> bicycleList = makeObj.getBicycleList();
 
-        MongoClient mongoClient = new MongoClient("localhost", 27017);
-        DB database = mongoClient.getDB("vehicles_db");
+        List<String> results = new ArrayList<>();
+
+        DB database = services.getDatabase();
 
         DBCollection carCollection = database.getCollection("cars");
         DBCollection motorcycleCollection = database.getCollection("motorcycles");
         DBCollection bicycleCollection = database.getCollection("bicycles");
 
+        CarTask carTask = new CarTask(carList, carCollection);
+        MotorcycleTask motorcycleTask = new MotorcycleTask(motorcycleList, motorcycleCollection);
+        BicycleTask bicycleTask = new BicycleTask(bicycleList, bicycleCollection);
 
-//        Runnable carRunnable = new Runnable(){
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
+
+        Future<String> futureCar = executorService.submit(carTask);
+        Future<String> futureMotorcycle = executorService.submit(motorcycleTask);
+        Future<String> futureBicycle = executorService.submit(bicycleTask);
+
+        //completableFuture
+
+        try{
+            results.add(futureCar.get());
+            results.add(futureMotorcycle.get());
+            results.add(futureBicycle.get());
+            results.stream()
+                    .forEach(System.out::println);
+            executorService.shutdown();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+
+
+
+//        AtomicReference<BasicDBObject> document = new AtomicReference<>(new BasicDBObject());
+//
+//        Runnable carRunnable = new Runnable() {
+//            @Override
 //            public void run() {
-//                for (Car obj : carList) {
-//                    BasicDBObject carDocument = new BasicDBObject();
-//                    carDocument = services.getCarDocument(obj);
-//                    carCollection.insert(carDocument);
-//                    System.out.println("Inserted a CAR");
-//                }
+//                carList.stream()
+//                        .forEach(obj -> {
+//                            document.set(services.getCarDocument(obj));
+//                            carCollection.insert(document.get());
+//                            System.out.println("Inserted a CAR");
+//                        });
 //            }
 //        };
-
-        AtomicReference<BasicDBObject> document = new AtomicReference<>(new BasicDBObject());
-
-        Runnable carRunnable = new Runnable() {
-            @Override
-            public void run() {
-                carList.stream()
-                        .forEach(obj -> {
-                            document.set(services.getCarDocument(obj));
-                            carCollection.insert(document.get());
-                            System.out.println("Inserted a CAR");
-                        });
-
-            }
-        };
-
-        Runnable motorcycleRunnable = new Runnable() {
-            @Override
-            public void run() {
-                motorcycleList.stream()
-                        .forEach(obj -> {
-                            document.set(services.getMotorcycleDocument(obj));
-                            motorcycleCollection.insert(document.get());
-                            System.out.println("Inserted a MOTORCYCLE");
-                        });
-            }
-        };
-
-        Runnable bicycleRunnable = new Runnable() {
-            @Override
-            public void run() {
-                bicycleList.stream()
-                        .forEach(obj -> {
-                            document.set(services.getBicycleDocument(obj));
-                            bicycleCollection.insert(document.get());
-                            System.out.println("Inserted a BICYCLE");
-                        });
-            }
-        };
-
+//
+//
+//
 //        Runnable motorcycleRunnable = new Runnable() {
+//            @Override
 //            public void run() {
-//                for (Motorcycle obj : motorcycleList) {
-//                    BasicDBObject motorcycleDocument = new BasicDBObject();
-//                    motorcycleDocument = services.getMotorcycleDocument(obj);
-//                    motorcycleCollection.insert(motorcycleDocument);
-//                    System.out.println("Inserted a MOTORCYCLE");
-//                }
+//                motorcycleList.stream()
+//                        .forEach(obj -> {
+//                            document.set(services.getMotorcycleDocument(obj));
+//                            motorcycleCollection.insert(document.get());
+//                            System.out.println("Inserted a MOTORCYCLE");
+//                        });
 //            }
 //        };
-
+//
 //        Runnable bicycleRunnable = new Runnable() {
+//            @Override
 //            public void run() {
-//                for (Bicycle obj : bicycleList) {
-//                    BasicDBObject bicycleDocument = new BasicDBObject();
-//                    bicycleDocument = services.getBicycleDocument(obj);
-//                    bicycleCollection.insert(bicycleDocument);
-//                    System.out.println("Inserted a BICYCLE");
-//                }
+//                bicycleList.stream()
+//                        .forEach(obj -> {
+//                            document.set(services.getBicycleDocument(obj));
+//                            bicycleCollection.insert(document.get());
+//                            System.out.println("Inserted a BICYCLE");
+//                        });
 //            }
 //        };
-
-        new Thread(carRunnable).start();
-        new Thread(motorcycleRunnable).start();
-        new Thread(bicycleRunnable).start();
+//
+//        new Thread(carRunnable).start();
+//        new Thread(motorcycleRunnable).start();
+//        new Thread(bicycleRunnable).start();
 
     }
 
